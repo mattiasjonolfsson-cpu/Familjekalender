@@ -515,7 +515,7 @@ const FIREBASE_CONFIG = {
 // ════════════════════════════════════════════════
 // 🔐 LÖSENORD – ändra till ditt eget!
 // ════════════════════════════════════════════════
-const EDIT_PASSWORD = "familjen2025";
+const EDIT_PASSWORD = "Guppy";
 
 // ════════════════════════════════════════════════
 
@@ -596,7 +596,7 @@ let currentMonth = new Date().getMonth();
 let events = {}; // { "2025-03-14": [{id, title, note, color}] }
 let selectedDate = null;
 let selectedColor = 'blue';
-let isUnlocked = false;
+let isUnlocked = localStorage.getItem('kalender_unlocked') === 'true';
 let db = null;
 let firebaseOk = false;
 
@@ -840,6 +840,7 @@ document.getElementById('addBtn').addEventListener('click', async () => {
 document.getElementById('unlockBtn').addEventListener('click', () => {
   if (isUnlocked) {
     isUnlocked = false;
+    localStorage.removeItem('kalender_unlocked');
     updateLockUI();
   } else {
     document.getElementById('pwOverlay').classList.add('open');
@@ -852,6 +853,7 @@ document.getElementById('pwSubmit').addEventListener('click', () => {
   const val = document.getElementById('pwInput').value;
   if (val === EDIT_PASSWORD) {
     isUnlocked = true;
+    localStorage.setItem('kalender_unlocked', 'true');
     document.getElementById('pwOverlay').classList.remove('open');
     updateLockUI();
   } else {
