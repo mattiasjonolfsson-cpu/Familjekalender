@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="theme-color" content="#faf7f2"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+  <meta name="apple-mobile-web-app-title" content="Familjekalender"/>
+  <link rel="manifest" href="manifest.json"/>
+  <title>Familjekalender</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #faf7f2;
+      --paper: #ffffff;
+      --ink: #1a1a1a;
+      --ink-light: #6b6560;
+      --ink-faint: #c5bfb8;
+      --accent: #c0392b;
+      --accent-soft: #fdf0ef;
+      --blue: #2c6e9e;
+      --blue-soft: #eef4fa;
+      --green: #2d7a4f;
+      --green-soft: #edf7f2;
+      --gold: #b8860b;
+      --gold-soft: #fdf8e8;
+      --border: #e8e2da;
+      --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+      --radius: 10px;
+      --today-ring: #c0392b;
+    }
+
+    html { background: var(--bg); }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      color: var(--ink);
+      min-height: 100dvh;
+      background: var(--bg);
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: var(--paper);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 20px 12px;
+      position: sticky; top: 0; z-index: 100;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+    }
+    .header-top {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .month-nav { display: flex; align-items: center; gap: 12px; }
+    .nav-btn {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      cursor: pointer; font-size: 16px; color: var(--ink-light);
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    .nav-btn:hover { background: var(--ink); color: white; border-color: var(--ink); }
+    .month-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(18px, 4vw, 24px);
+      font-weight: 700;
+      min-width: 200px; text-align: center;
+    }
+    .today-btn {
+      padding: 7px 14px; border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px; font-weight: 500;
+      color: var(--ink-light); cursor: pointer;
+      transition: all 0.15s;
+    }
+    .today-btn:hover { background: var(--ink); color: white; border-color: var(--ink); }
+
+    /* Day headers */
+    .day-headers {
+      display: grid;
+      grid-template-columns: 36px repeat(7, 1fr);
+      gap: 2px;
+    }
+    .day-header {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      padding: 4px 0;
+    }
+    .day-header.weekend { color: var(--accent); }
+
+    /* ── CALENDAR GRID ── */
+    .calendar-wrap {
+      padding: 12px 12px 80px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: 36px repeat(7, 1fr);
+      gap: 3px;
+    }
+
+    /* Week number */
+    .week-num {
+      display: flex; align-items: flex-start; justify-content: center;
+      padding-top: 8px;
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--ink-faint);
+      letter-spacing: 0.05em;
+    }
+
+    /* Day cell */
+    .day-cell {
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      min-height: clamp(80px, 14vw, 120px);
+      padding: 6px 8px;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      position: relative;
+      overflow: hidden;
+    }
+    .day-cell:hover { border-color: var(--ink-faint); box-shadow: var(--shadow); }
+    .day-cell.other-month { background: #f5f2ee; opacity: 0.5; }
+    .day-cell.today {
+      border-color: var(--today-ring) !important;
+      border-width: 2px;
+      box-shadow: 0 0 0 1px var(--today-ring);
+    }
+    .day-cell.weekend .day-num { color: var(--accent); }
+    .day-cell.holiday { background: var(--accent-soft); }
+
+    .day-num {
+      font-family: 'Playfair Display', serif;
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1;
+      margin-bottom: 3px;
+    }
+    .nameday {
+      font-size: 10px;
+      color: var(--blue);
+      margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .holiday-label {
+      font-size: 10px;
+      color: var(--accent);
+      font-weight: 500;
+      margin-bottom: 3px;
+      line-height: 1.2;
+    }
+    .event-chip {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-weight: 500;
+    }
+    .event-chip.blue  { background: var(--blue-soft);  color: var(--blue); }
+    .event-chip.green { background: var(--green-soft); color: var(--green); }
+    .event-chip.gold  { background: var(--gold-soft);  color: var(--gold); }
+    .event-chip.red   { background: var(--accent-soft);color: var(--accent); }
+    .event-chip.gray  { background: #f0ede8; color: var(--ink-light); }
+    .more-events { font-size: 10px; color: var(--ink-faint); margin-top: 2px; }
+
+    /* ── MODAL ── */
+    .overlay {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(26,26,26,0.45);
+      backdrop-filter: blur(4px);
+      display: flex; align-items: flex-end;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--paper);
+      width: 100%; max-width: 520px;
+      margin: 0 auto;
+      border-radius: 20px 20px 0 0;
+      padding: 24px 24px calc(24px + env(safe-area-inset-bottom));
+      transform: translateY(40px);
+      transition: transform 0.25s cubic-bezier(0.34,1.2,0.64,1);
+      max-height: 90dvh;
+      overflow-y: auto;
+    }
+    .overlay.open .modal { transform: translateY(0); }
+    .modal-handle {
+      width: 40px; height: 4px; border-radius: 2px;
+      background: var(--ink-faint);
+      margin: 0 auto 20px;
+    }
+    .modal-date {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px; font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .modal-meta { font-size: 13px; color: var(--ink-light); margin-bottom: 20px; }
+
+    /* Events list in modal */
+    .modal-events { margin-bottom: 20px; }
+    .modal-event-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: var(--bg);
+      margin-bottom: 6px;
+      position: relative;
+    }
+    .modal-event-dot {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    }
+    .dot-blue  { background: var(--blue); }
+    .dot-green { background: var(--green); }
+    .dot-gold  { background: var(--gold); }
+    .dot-red   { background: var(--accent); }
+    .dot-gray  { background: var(--ink-faint); }
+    .modal-event-text { flex: 1; font-size: 14px; }
+    .modal-event-delete {
+      background: none; border: none; cursor: pointer;
+      font-size: 16px; color: var(--ink-faint); padding: 4px;
+      border-radius: 4px; transition: color 0.15s;
+      display: none;
+    }
+    .modal-event-delete:hover { color: var(--accent); }
+    .unlocked .modal-event-delete { display: block; }
+
+    /* Add event form */
+    .add-form { display: none; }
+    .unlocked .add-form { display: block; }
+    .add-form h4 {
+      font-size: 13px; font-weight: 500; color: var(--ink-light);
+      margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.08em;
+    }
+    .form-row { margin-bottom: 10px; }
+    .form-row input, .form-row textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      background: var(--bg);
+      color: var(--ink);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .form-row input:focus, .form-row textarea:focus { border-color: var(--blue); }
+    .form-row textarea { resize: none; height: 70px; }
+    .color-row {
+      display: flex; gap: 8px; margin-bottom: 14px;
+    }
+    .color-opt {
+      width: 28px; height: 28px; border-radius: 50%;
+      cursor: pointer; border: 2px solid transparent;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+    .color-opt:hover { transform: scale(1.15); }
+    .color-opt.selected { border-color: var(--ink); transform: scale(1.15); }
+    .color-opt.blue  { background: var(--blue); }
+    .color-opt.green { background: var(--green); }
+    .color-opt.gold  { background: var(--gold); }
+    .color-opt.red   { background: var(--accent); }
+    .color-opt.gray  { background: #9e9890; }
+
+    .btn-add {
+      width: 100%; padding: 12px;
+      border-radius: 10px; border: none;
+      background: var(--ink);
+      color: white;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px; font-weight: 500;
+      cursor: pointer; transition: opacity 0.15s;
+    }
+    .btn-add:hover { opacity: 0.85; }
+
+    /* Lock bar */
+    .lock-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 14px;
+      background: var(--bg);
+      border-radius: 10px;
+      margin-bottom: 16px;
+    }
+    .lock-status { font-size: 13px; color: var(--ink-light); display: flex; align-items: center; gap: 6px; }
+    .lock-icon { font-size: 16px; }
+    .btn-unlock {
+      padding: 7px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--paper);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px; font-weight: 500;
+      color: var(--ink); cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-unlock:hover { background: var(--ink); color: white; border-color: var(--ink); }
+    .btn-lock {
+      padding: 7px 14px;
+      border-radius: 8px;
+      border: none;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px; font-weight: 500;
+      cursor: pointer;
+    }
+
+    /* Password modal */
+    .pw-overlay {
+      position: fixed; inset: 0; z-index: 300;
+      background: rgba(26,26,26,0.5);
+      backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    }
+    .pw-overlay.open { opacity: 1; pointer-events: all; }
+    .pw-box {
+      background: var(--paper);
+      border-radius: 16px;
+      padding: 32px 28px;
+      width: 100%; max-width: 340px;
+      text-align: center;
+      transform: scale(0.95);
+      transition: transform 0.2s;
+    }
+    .pw-overlay.open .pw-box { transform: scale(1); }
+    .pw-box h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px; margin-bottom: 8px;
+    }
+    .pw-box p { font-size: 13px; color: var(--ink-light); margin-bottom: 20px; }
+    .pw-input {
+      width: 100%; padding: 12px 16px;
+      border: 1px solid var(--border); border-radius: 10px;
+      font-family: 'DM Sans', sans-serif; font-size: 16px;
+      text-align: center; letter-spacing: 0.2em;
+      background: var(--bg); color: var(--ink);
+      outline: none; margin-bottom: 12px;
+      transition: border-color 0.15s;
+    }
+    .pw-input:focus { border-color: var(--blue); }
+    .pw-input.error { border-color: var(--accent); animation: shake 0.3s ease; }
+    @keyframes shake {
+      0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)}
+    }
+    .btn-pw {
+      width: 100%; padding: 12px;
+      border-radius: 10px; border: none;
+      background: var(--ink); color: white;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px; font-weight: 500;
+      cursor: pointer; margin-bottom: 10px;
+    }
+    .btn-pw-cancel {
+      background: none; border: none;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px; color: var(--ink-light);
+      cursor: pointer; padding: 6px;
+    }
+
+    /* Loading state */
+    .loading-chip {
+      font-size: 10px; color: var(--ink-faint);
+      padding: 2px 0;
+    }
+
+    /* Firebase setup notice */
+    .setup-notice {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: var(--ink); color: white;
+      padding: 12px 20px; border-radius: 12px;
+      font-size: 13px; max-width: 90vw; text-align: center;
+      z-index: 500; display: none;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    }
+    .setup-notice.show { display: block; }
+    .setup-notice a { color: #7ec8e3; }
+
+    @media (min-width: 700px) {
+      .day-cell { min-height: 110px; }
+      .modal { border-radius: 16px; margin-bottom: 40px; }
+      .overlay { align-items: center; }
+    }
+    @media (max-width: 480px) {
+      .calendar-wrap { padding: 8px 6px 80px; }
+      .calendar-grid { gap: 2px; }
+      .day-cell { min-height: 68px; padding: 4px 5px; }
+      .day-num { font-size: 13px; }
+      .nameday, .holiday-label, .event-chip { font-size: 9px; }
+      .week-num { font-size: 9px; }
+      .month-title { min-width: 160px; font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <div class="month-nav">
+      <button class="nav-btn" id="prevBtn">‹</button>
+      <div class="month-title" id="monthTitle">—</div>
+      <button class="nav-btn" id="nextBtn">›</button>
+    </div>
+    <button class="today-btn" id="todayBtn">Idag</button>
+  </div>
+  <div class="day-headers">
+    <div class="day-header"></div>
+    <div class="day-header">Mån</div>
+    <div class="day-header">Tis</div>
+    <div class="day-header">Ons</div>
+    <div class="day-header">Tor</div>
+    <div class="day-header">Fre</div>
+    <div class="day-header weekend">Lör</div>
+    <div class="day-header weekend">Sön</div>
+  </div>
+</header>
+
+<div class="calendar-wrap">
+  <div class="calendar-grid" id="calGrid"></div>
+</div>
+
+<!-- Day modal -->
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-date" id="modalDate"></div>
+    <div class="modal-meta" id="modalMeta"></div>
+
+    <div class="lock-bar">
+      <div class="lock-status">
+        <span class="lock-icon" id="lockIcon">🔒</span>
+        <span id="lockText">Låst – visa lösenord för att redigera</span>
+      </div>
+      <button class="btn-unlock" id="unlockBtn">Lås upp</button>
+    </div>
+
+    <div class="modal-events" id="modalEvents"></div>
+
+    <div class="add-form" id="addForm">
+      <h4>Lägg till händelse</h4>
+      <div class="form-row">
+        <input type="text" id="eventTitle" placeholder="Händelsens namn…" maxlength="80"/>
+      </div>
+      <div class="form-row">
+        <textarea id="eventNote" placeholder="Anteckning (valfritt)…"></textarea>
+      </div>
+      <div class="color-row">
+        <div class="color-opt blue selected" data-color="blue"></div>
+        <div class="color-opt green" data-color="green"></div>
+        <div class="color-opt gold" data-color="gold"></div>
+        <div class="color-opt red" data-color="red"></div>
+        <div class="color-opt gray" data-color="gray"></div>
+      </div>
+      <button class="btn-add" id="addBtn">Spara händelse</button>
+    </div>
+  </div>
+</div>
+
+<!-- Password overlay -->
+<div class="pw-overlay" id="pwOverlay">
+  <div class="pw-box">
+    <h3>🔑 Lås upp</h3>
+    <p>Ange lösenordet för att kunna lägga till och redigera händelser.</p>
+    <input type="password" class="pw-input" id="pwInput" placeholder="••••••" maxlength="30"/>
+    <button class="btn-pw" id="pwSubmit">Lås upp</button>
+    <button class="btn-pw-cancel" id="pwCancel">Avbryt</button>
+  </div>
+</div>
+
+<div class="setup-notice" id="setupNotice">
+  ⚠️ Firebase ej konfigurerat – händelser sparas bara lokalt. <a href="#" id="setupLink">Hur konfigurerar jag?</a>
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, onValue, push, remove } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+// ════════════════════════════════════════════════
+// 🔧 KONFIGURERA FIREBASE HÄR
+// Gå till console.firebase.google.com → skapa projekt →
+// Realtime Database → skapa databas → projektinställningar → webb-app
+// Klistra in dina värden nedan:
+// ════════════════════════════════════════════════
+const FIREBASE_CONFIG = {
+  apiKey: "DIN_API_KEY",
+  authDomain: "DITT_PROJEKT.firebaseapp.com",
+  databaseURL: "https://DITT_PROJEKT-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "DITT_PROJEKT",
+  storageBucket: "DITT_PROJEKT.appspot.com",
+  messagingSenderId: "DITT_ID",
+  appId: "DITT_APP_ID"
+};
+
+// ════════════════════════════════════════════════
+// 🔐 LÖSENORD – ändra till ditt eget!
+// ════════════════════════════════════════════════
+const EDIT_PASSWORD = "familjen2025";
+
+// ════════════════════════════════════════════════
+
+const MONTHS_SV = ["Januari","Februari","Mars","April","Maj","Juni","Juli","Augusti","September","Oktober","November","December"];
+const DAYS_SV   = ["måndag","tisdag","onsdag","torsdag","fredag","lördag","söndag"];
+
+// Swedish public holidays (fixed)
+function getHolidays(year) {
+  const h = {};
+  const set = (m, d, name) => { h[`${year}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`] = name; };
+  set(1,1,"Nyårsdagen"); set(1,6,"Trettondedag jul");
+  set(5,1,"Första maj"); set(6,6,"Nationaldagen");
+  set(12,24,"Julafton"); set(12,25,"Juldagen");
+  set(12,26,"Annandag jul"); set(12,31,"Nyårsafton");
+  // Easter-based
+  const e = easter(year);
+  const addDays = (d,n) => { const r=new Date(d); r.setDate(r.getDate()+n); return r; };
+  const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  h[fmt(addDays(e,-3))]  = "Skärtorsdagen";
+  h[fmt(addDays(e,-2))]  = "Långfredagen";
+  h[fmt(e)]              = "Påskdagen";
+  h[fmt(addDays(e,1))]   = "Annandag påsk";
+  h[fmt(addDays(e,39))]  = "Kristi himmelsfärdsdag";
+  h[fmt(addDays(e,49))]  = "Pingstdagen";
+  // Midsommar (Saturday between June 20–26)
+  let mid = new Date(year,5,20);
+  while(mid.getDay()!==6) mid.setDate(mid.getDate()+1);
+  h[fmt(addDays(mid,-1))] = "Midsommarafton";
+  h[fmt(mid)]             = "Midsommardagen";
+  // Alla helgons dag (Saturday between Oct 31–Nov 6)
+  let allh = new Date(year,9,31);
+  while(allh.getDay()!==6) allh.setDate(allh.getDate()+1);
+  h[fmt(allh)] = "Alla helgons dag";
+  return h;
+}
+
+function easter(year) {
+  const a=year%19,b=Math.floor(year/100),c=year%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),month=Math.floor((h+l-7*m+114)/31),day=((h+l-7*m+114)%31)+1;
+  return new Date(year,month-1,day);
+}
+
+// Swedish name days (simplified – main names per day)
+const NAMEDAYS = {
+  "01-01":"Nyårsdagen","01-02":"Svea","01-03":"Alfred,Alfrida","01-04":"Rut","01-05":"Hanna,Hannele","01-06":"Baltsar,Kasper,Melker","01-07":"August,Augusta","01-08":"Erland","01-09":"Gunnar,Gunder","01-10":"Sigbritt,Sigurd","01-11":"Jan,Jannike","01-12":"Frideborg,Fridolf","01-13":"Knut","01-14":"Felix,Felicia","01-15":"Laura,Lorentz","01-16":"Hjalmar,Helmer","01-17":"Anton,Tony","01-18":"Hilda,Hildur","01-19":"Henrik,Henry","01-20":"Fabian,Sebastian","01-21":"Agnes,Agneta","01-22":"Vincent,Viktor","01-23":"Frej,Freja","01-24":"Erika","01-25":"Paul,Pål","01-26":"Bodil,Boel","01-27":"Göte,Göta","01-28":"Karl,Karla","01-29":"Diana","01-30":"Gunhild,Gunilla","01-31":"Ivar,Joar",
+  "02-01":"Max,Maximilian","02-02":"Kyndelsmässodagen","02-03":"Disa,Hjördis","02-04":"Ansgar,Anse","02-05":"Agata,Agda","02-06":"Dorotea,Doris","02-07":"Rikard,Dick","02-08":"Berta,Bert","02-09":"Fanny,Franciska","02-10":"Iris","02-11":"Yngve,Inge","02-12":"Evelina,Evelin","02-13":"Agne,Agnar","02-14":"Valentin","02-15":"Sigfrid","02-16":"Julia,Julius","02-17":"Alexandra,Alex","02-18":"Frida,Fredrika","02-19":"Gabrel,Gabriella","02-20":"Vilja","02-21":"Hilding","02-22":"Magnus,Måns","02-23":"Torsten,Torsten","02-24":"Mattias,Mats","02-25":"Sigrid,Sirid","02-26":"Torgny,Torkel","02-27":"Lage,Lage","02-28":"Maria","02-29":"Ellinor",
+  "03-01":"Albin,Elvira","03-02":"Ernst,Erna","03-03":"Gunborg,Gunvor","03-04":"Adrian,Adriana","03-05":"Tora,Tove","03-06":"Ebba,Ebbe","03-07":"Camilla","03-08":"Siv","03-09":"Torborg,Torbjörn","03-10":"Edla,Ada","03-11":"Edvin,Egon","03-12":"Viktoria","03-13":"Greger","03-14":"Matilda,Maud","03-15":"Kristoffer,Christel","03-16":"Herbert,Gilbert","03-17":"Gertrud","03-18":"Edvard,Edward","03-19":"Josef,Josefina","03-20":"Joakim,Joaquim","03-21":"Bengt","03-22":"Kennet,Kent","03-23":"Gerda,Gerd","03-24":"Gabriel,Gabriella","03-25":"Marie bebådelsedag","03-26":"Emanuel","03-27":"Rudolf,Rolf","03-28":"Malkolm","03-29":"Jonas,Jens","03-30":"Holger,Holmger","03-31":"Ester,Estrid",
+  "04-01":"Harald,Hervor","04-02":"Gudmund,Ingemund","04-03":"Ferdinand,Nanna","04-04":"Marianne,Marlene","04-05":"Irene,Irja","04-06":"Vilhelm,Helmi","04-07":"Sunniva,Synne","04-08":"Nadja,Tanja","04-09":"Otto,Ottilia","04-10":"Ingvar,Ingvor","04-11":"Ulf,Ylva","04-12":"Liv","04-13":"Artur,Artus","04-14":"Tiburtius","04-15":"Patrik,Patricia","04-16":"Margit,Margita","04-17":"Elias,Elis","04-18":"Valborg","04-19":"Olaus,Ola","04-20":"Amalia,Amelie","04-21":"Anselm","04-22":"Allan,Glenn","04-23":"Georg,Göran","04-24":"Vega","04-25":"Markus","04-26":"Teresia,Terese","04-27":"Engelbrekt","04-28":"Ture,Tyra","04-29":"Tyko","04-30":"Valborg",
+  "05-01":"Valborg,Filip","05-02":"Filip,Filippa","05-03":"John,Jane","05-04":"Monika,Mona","05-05":"Gotthard","05-06":"Marit,Rita","05-07":"Carina,Carita","05-08":"Åke","05-09":"Reidar,Reidun","05-10":"Esbjörn,Styrbjörn","05-11":"Märta,Martha","05-12":"Charlotta,Lotta","05-13":"Linnea,Linn","05-14":"Halvard,Halvar","05-15":"Sofia,Sonja","05-16":"Ronald,Ronny","05-17":"Rebecka,Ruben","05-18":"Eriksmässan","05-19":"Maj,Majken","05-20":"Karolina,Carola","05-21":"Konstantin,Conny","05-22":"Hemming","05-23":"Desideria,Desiré","05-24":"Ivan,Vanja","05-25":"Urban","05-26":"Vilhelmina,Vilma","05-27":"Beda,Bede","05-28":"Ingeborg,Borghild","05-29":"Elin,Elna","05-30":"Fröjdis","05-31":"Petronella,Pernilla",
+  "06-01":"Gun,Gunnel","06-02":"Rutger,Roger","06-03":"Ingemar,Gudmar","06-04":"Solbritt,Solveig","06-05":"Bonifatius","06-06":"Gustav,Gösta","06-07":"Robert,Robin","06-08":"Eivor,Majvor","06-09":"Böje,Ante","06-10":"Svante,Boris","06-11":"Bertil,Bernhard","06-12":"Eskil","06-13":"Ante,Antti","06-14":"Håkan,Hakon","06-15":"Margit,Marketta","06-16":"Axel,Axelina","06-17":"Torborg,Torsten","06-18":"Björn,Bjarne","06-19":"Germund,Görel","06-20":"Linda","06-21":"Alf,Alvar","06-22":"Paulina,Paola","06-23":"Adolf,Lillemor","06-24":"Johannes","06-25":"David,Salomon","06-26":"Rakel,Lea","06-27":"Selma,Hulda","06-28":"Leo","06-29":"Peter,Petra","06-30":"Gustav II Adolf",
+  "07-01":"Aron,Mirjam","07-02":"Rosa,Rosita","07-03":"Aurora,Ragnvi","07-04":"Ulrika,Ulla","07-05":"Laila,Ritva","07-06":"Esaias,Jessika","07-07":"Klas","07-08":"Kjerstin,Kerstin","07-09":"Jörgen,Örjan","07-10":"Kristin,Karsten","07-11":"Eleonora,Eleonore","07-12":"Herman,Hermine","07-13":"Joel,Judit","07-14":"Folke","07-15":"Ragnhild,Ragnvald","07-16":"Reinhold,Reine","07-17":"Laura,Lovisa","07-18":"Fredrik,Fredrika","07-19":"Sara,Sally","07-20":"Margareta,Greta","07-21":"Johanna","07-22":"Magdalena,Madeleine","07-23":"Emma","07-24":"Kristina,Kerstin","07-25":"Jakob","07-26":"Jesper","07-27":"Marta","07-28":"Botvid,Seved","07-29":"Olof","07-30":"Algot","07-31":"Helena,Elin",
+  "08-01":"Per,Pernilla","08-02":"Karin,Kajsa","08-03":"Tage","08-04":"Arne,Arnold","08-05":"Ulrik,Alrik","08-06":"Kristoffer,Kristofina","08-07":"Dennis,Daniel","08-08":"Silvia,Sylvia","08-09":"Roland","08-10":"Lars,Lorentz","08-11":"Susanna","08-12":"Klara","08-13":"Kaj,Kaja","08-14":"Uno","08-15":"Stella,Estelle","08-16":"Brynolf","08-17":"Verner,Valter","08-18":"Ellen,Lena","08-19":"Magnus,Måns","08-20":"Bernhard,Björn","08-21":"Jon,Jonathan","08-22":"Henrietta,Henrika","08-23":"Signe,Signhild","08-24":"Bartolomeus","08-25":"Lovisa,Louise","08-26":"Östen","08-27":"Rolf,Roffe","08-28":"Fatima,Leila","08-29":"Hans,Hampus","08-30":"Albert,Albertina","08-31":"Arvid,Vidar",
+  "09-01":"Samuel,Samuella","09-02":"Justus,Justina","09-03":"Alfons,Alfonsa","09-04":"Gunnhild,Gunnvor","09-05":"Adela,Heidi","09-06":"Lisen,Lisbeth","09-07":"Regina,Reina","09-08":"Alma,Hulda","09-09":"Anita,Annette","09-10":"Tord,Turid","09-11":"Dagny,Helny","09-12":"Elin,Helene","09-13":"Maurits,Moritz","09-14":"Ida","09-15":"Sigrid,Siri","09-16":"Cornelius","09-17":"Hildegard","09-18":"Orvar","09-19":"Fredrika,Ragnfrid","09-20":"Elise,Lisa","09-21":"Matteus","09-22":"Maurits,Moritz","09-23":"Tekla,Thecla","09-24":"Gerhard,Gert","09-25":"Tryggve","09-26":"Einar,Enar","09-27":"Dagmar,Rigmor","09-28":"Lennart,Leif","09-29":"Mikael,Mikaela","09-30":"Helge",
+  "10-01":"Ragnar,Ragnhild","10-02":"Ludvig,Ludvika","10-03":"Evald,Osvald","10-04":"Frans,Frank","10-05":"Bror","10-06":"Jenny,Jennifer","10-07":"Birgitta,Britta","10-08":"Nils","10-09":"Ingrid,Inger","10-10":"Harry,Harald","10-11":"Erland","10-12":"Valfrid,Manfred","10-13":"Göta,Göte","10-14":"Folke,Sine","10-15":"Hedvig,Hedvig","10-16":"Finn,Fianna","10-17":"Antonia","10-18":"Lukas","10-19":"Tore,Torsten","10-20":"Sibylla","10-21":"Ursula","10-22":"Marika,Marita","10-23":"Severin","10-24":"Evert,Eilert","10-25":"Inga,Ingalill","10-26":"Amanda,Manda","10-27":"Sabina","10-28":"Simon,Simone","10-29":"Viola","10-30":"Elsa,Elsie","10-31":"Edit,Hedvig",
+  "11-01":"Allhelgonadagen","11-02":"Tobias","11-03":"Hubert,Hugo","11-04":"Sverker,Karl","11-05":"Eugen,Eugenia","11-06":"Gustav,Adolf","11-07":"Ingegerd,Ingela","11-08":"Vendela,Wendela","11-09":"Teodor,Teodora","11-10":"Martin,Martina","11-11":"Mårten","11-12":"Konrad,Kurt","11-13":"Kristian,Kristiana","11-14":"Emil,Emilia","11-15":"Leopold","11-16":"Vibeke,Viveka","11-17":"Elisabet,Elsa","11-18":"Filippa,Pip","11-19":"Elisabet","11-20":"Pontus,Marina","11-21":"Helga,Olga","11-22":"Cecilia,Cissi","11-23":"Klemens","11-24":"Flore,Flora","11-25":"Katarina,Katrin","11-26":"Linus","11-27":"Astrid,Asta","11-28":"Malte","11-29":"Sune","11-30":"Andreas,Anders",
+  "12-01":"Oskar,Ossian","12-02":"Beata,Beatrice","12-03":"Lydia","12-04":"Barbara,Barbro","12-05":"Sven","12-06":"Nikolaus","12-07":"Angela,Angelika","12-08":"Virginia","12-09":"Anna","12-10":"Malin,Malena","12-11":"Daniel,Daniela","12-12":"Alexander,Lexa","12-13":"Lucia","12-14":"Sten,Sixten","12-15":"Gottfried,Gottfrid","12-16":"Assar,Asar","12-17":"Stig","12-18":"Abraham,Isak","12-19":"Isak","12-20":"Israel,Moses","12-21":"Tomas","12-22":"Filippa,Lina","12-23":"Adam,Eva","12-24":"Julafton","12-25":"Juldagen","12-26":"Stefan,Staffan","12-27":"Johannes","12-28":"Oskar,Ossian","12-29":"Jonatan","12-30":"Dawit","12-31":"Nyårsafton"
+};
+
+function getNameday(month, day) {
+  const key = `${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+  return NAMEDAYS[key] || "";
+}
+
+function getWeekNumber(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+function dateKey(y, m, d) {
+  return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+
+// State
+let currentYear = new Date().getFullYear();
+let currentMonth = new Date().getMonth();
+let events = {}; // { "2025-03-14": [{id, title, note, color}] }
+let selectedDate = null;
+let selectedColor = 'blue';
+let isUnlocked = false;
+let db = null;
+let firebaseOk = false;
+
+// Init Firebase
+try {
+  if (FIREBASE_CONFIG.apiKey !== "DIN_API_KEY") {
+    const app = initializeApp(FIREBASE_CONFIG);
+    db = getDatabase(app);
+    firebaseOk = true;
+    // Listen to all events
+    const eventsRef = ref(db, 'events');
+    onValue(eventsRef, snapshot => {
+      events = snapshot.val() || {};
+      renderCalendar();
+      if (selectedDate) updateModalEvents();
+    });
+  } else {
+    document.getElementById('setupNotice').classList.add('show');
+  }
+} catch(e) {
+  console.warn('Firebase init failed', e);
+  document.getElementById('setupNotice').classList.add('show');
+}
+
+// Render calendar
+function renderCalendar() {
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+  const holidays = getHolidays(currentYear);
+  const today = new Date();
+
+  document.getElementById('monthTitle').textContent =
+    `${MONTHS_SV[currentMonth]} ${currentYear}`;
+
+  // First day of month (Monday=0)
+  const firstDay = new Date(currentYear, currentMonth, 1);
+  const startDow = (firstDay.getDay() + 6) % 7; // 0=Mon
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const daysInPrevMonth = new Date(currentYear, currentMonth, 0).getDate();
+
+  let cellDate = new Date(currentYear, currentMonth, 1 - startDow);
+  let weekRendered = new Set();
+
+  const totalCells = Math.ceil((startDow + daysInMonth) / 7) * 7;
+
+  for (let i = 0; i < totalCells; i++) {
+    const dow = i % 7;
+
+    // Week number column
+    if (dow === 0) {
+      const wn = getWeekNumber(cellDate);
+      if (!weekRendered.has(wn)) {
+        weekRendered.add(wn);
+        const wnEl = document.createElement('div');
+        wnEl.className = 'week-num';
+        wnEl.textContent = wn;
+        grid.appendChild(wnEl);
+      }
+    }
+
+    const y = cellDate.getFullYear();
+    const m = cellDate.getMonth();
+    const d = cellDate.getDate();
+    const isCurrentMonth = m === currentMonth && y === currentYear;
+    const isToday = d === today.getDate() && m === today.getMonth() && y === today.getFullYear();
+    const isWeekend = dow >= 5;
+    const dk = dateKey(y, m, d);
+    const holiday = holidays[dk];
+
+    const cell = document.createElement('div');
+    cell.className = 'day-cell' +
+      (isCurrentMonth ? '' : ' other-month') +
+      (isToday ? ' today' : '') +
+      (isWeekend ? ' weekend' : '') +
+      (holiday ? ' holiday' : '');
+
+    // Day number
+    const numEl = document.createElement('div');
+    numEl.className = 'day-num';
+    numEl.textContent = d;
+    cell.appendChild(numEl);
+
+    // Nameday
+    const nd = getNameday(m + 1, d);
+    if (nd && isCurrentMonth) {
+      const ndEl = document.createElement('div');
+      ndEl.className = 'nameday';
+      ndEl.textContent = nd;
+      cell.appendChild(ndEl);
+    }
+
+    // Holiday
+    if (holiday && isCurrentMonth) {
+      const hEl = document.createElement('div');
+      hEl.className = 'holiday-label';
+      hEl.textContent = holiday;
+      cell.appendChild(hEl);
+    }
+
+    // Events
+    const dayEvents = events[dk] ? Object.entries(events[dk]) : [];
+    const maxShow = 2;
+    dayEvents.slice(0, maxShow).forEach(([, ev]) => {
+      const chip = document.createElement('div');
+      chip.className = `event-chip ${ev.color || 'blue'}`;
+      chip.textContent = ev.title;
+      cell.appendChild(chip);
+    });
+    if (dayEvents.length > maxShow) {
+      const more = document.createElement('div');
+      more.className = 'more-events';
+      more.textContent = `+${dayEvents.length - maxShow} till`;
+      cell.appendChild(more);
+    }
+
+    cell.addEventListener('click', () => openModal(y, m, d));
+    grid.appendChild(cell);
+
+    cellDate.setDate(cellDate.getDate() + 1);
+  }
+}
+
+// Modal
+function openModal(y, m, d) {
+  selectedDate = { y, m, d };
+  const dk = dateKey(y, m, d);
+  const holidays = getHolidays(y);
+  const nd = getNameday(m + 1, d);
+  const holiday = holidays[dk];
+
+  const dateObj = new Date(y, m, d);
+  const dayName = DAYS_SV[(dateObj.getDay() + 6) % 7];
+  document.getElementById('modalDate').textContent =
+    `${dayName.charAt(0).toUpperCase() + dayName.slice(1)} ${d} ${MONTHS_SV[m].toLowerCase()} ${y}`;
+
+  let meta = [];
+  if (nd) meta.push(`Namnsdag: ${nd}`);
+  if (holiday) meta.push(`🎉 ${holiday}`);
+  document.getElementById('modalMeta').textContent = meta.join(' · ');
+
+  updateModalEvents();
+  document.getElementById('eventTitle').value = '';
+  document.getElementById('eventNote').value = '';
+
+  updateLockUI();
+  document.getElementById('overlay').classList.add('open');
+}
+
+function updateModalEvents() {
+  if (!selectedDate) return;
+  const { y, m, d } = selectedDate;
+  const dk = dateKey(y, m, d);
+  const container = document.getElementById('modalEvents');
+  container.innerHTML = '';
+  const dayEvents = events[dk] ? Object.entries(events[dk]) : [];
+  if (dayEvents.length === 0) {
+    container.innerHTML = '<div style="font-size:13px;color:var(--ink-faint);padding:8px 0;">Inga händelser denna dag.</div>';
+    return;
+  }
+  dayEvents.forEach(([id, ev]) => {
+    const item = document.createElement('div');
+    item.className = 'modal-event-item';
+    item.innerHTML = `
+      <div class="modal-event-dot dot-${ev.color||'blue'}"></div>
+      <div class="modal-event-text">
+        <strong>${ev.title}</strong>
+        ${ev.note ? `<br><span style="font-size:12px;color:var(--ink-light)">${ev.note}</span>` : ''}
+      </div>
+      <button class="modal-event-delete" data-id="${id}" data-dk="${dk}">✕</button>
+    `;
+    container.appendChild(item);
+  });
+  document.querySelectorAll('.modal-event-delete').forEach(btn => {
+    btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      const dk = btn.dataset.dk;
+      if (firebaseOk && db) {
+        await remove(ref(db, `events/${dk}/${id}`));
+      } else {
+        if (!events[dk]) return;
+        delete events[dk][id];
+        renderCalendar();
+        updateModalEvents();
+      }
+    });
+  });
+}
+
+function updateLockUI() {
+  const modal = document.getElementById('modal');
+  const lockIcon = document.getElementById('lockIcon');
+  const lockText = document.getElementById('lockText');
+  const unlockBtn = document.getElementById('unlockBtn');
+  if (isUnlocked) {
+    modal.classList.add('unlocked');
+    lockIcon.textContent = '🔓';
+    lockText.textContent = 'Upplåst – du kan redigera';
+    unlockBtn.textContent = 'Lås';
+    unlockBtn.className = 'btn-lock';
+  } else {
+    modal.classList.remove('unlocked');
+    lockIcon.textContent = '🔒';
+    lockText.textContent = 'Låst – ange lösenord för att redigera';
+    unlockBtn.textContent = 'Lås upp';
+    unlockBtn.className = 'btn-unlock';
+  }
+}
+
+// Color picker
+document.querySelectorAll('.color-opt').forEach(opt => {
+  opt.addEventListener('click', () => {
+    document.querySelectorAll('.color-opt').forEach(o => o.classList.remove('selected'));
+    opt.classList.add('selected');
+    selectedColor = opt.dataset.color;
+  });
+});
+
+// Add event
+document.getElementById('addBtn').addEventListener('click', async () => {
+  const title = document.getElementById('eventTitle').value.trim();
+  if (!title || !selectedDate) return;
+  const { y, m, d } = selectedDate;
+  const dk = dateKey(y, m, d);
+  const note = document.getElementById('eventNote').value.trim();
+  const newEvent = { title, note, color: selectedColor, created: Date.now() };
+
+  if (firebaseOk && db) {
+    await push(ref(db, `events/${dk}`), newEvent);
+  } else {
+    if (!events[dk]) events[dk] = {};
+    events[dk][Date.now()] = newEvent;
+    renderCalendar();
+    updateModalEvents();
+  }
+  document.getElementById('eventTitle').value = '';
+  document.getElementById('eventNote').value = '';
+});
+
+// Lock/unlock
+document.getElementById('unlockBtn').addEventListener('click', () => {
+  if (isUnlocked) {
+    isUnlocked = false;
+    updateLockUI();
+  } else {
+    document.getElementById('pwOverlay').classList.add('open');
+    document.getElementById('pwInput').value = '';
+    setTimeout(() => document.getElementById('pwInput').focus(), 100);
+  }
+});
+
+document.getElementById('pwSubmit').addEventListener('click', () => {
+  const val = document.getElementById('pwInput').value;
+  if (val === EDIT_PASSWORD) {
+    isUnlocked = true;
+    document.getElementById('pwOverlay').classList.remove('open');
+    updateLockUI();
+  } else {
+    const inp = document.getElementById('pwInput');
+    inp.classList.add('error');
+    inp.value = '';
+    setTimeout(() => inp.classList.remove('error'), 400);
+  }
+});
+document.getElementById('pwInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('pwSubmit').click();
+});
+document.getElementById('pwCancel').addEventListener('click', () => {
+  document.getElementById('pwOverlay').classList.remove('open');
+});
+
+// Close modal on overlay click
+document.getElementById('overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('overlay'))
+    document.getElementById('overlay').classList.remove('open');
+});
+
+// Navigation
+document.getElementById('prevBtn').addEventListener('click', () => {
+  currentMonth--; if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+  renderCalendar();
+});
+document.getElementById('nextBtn').addEventListener('click', () => {
+  currentMonth++; if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+  renderCalendar();
+});
+document.getElementById('todayBtn').addEventListener('click', () => {
+  currentYear = new Date().getFullYear();
+  currentMonth = new Date().getMonth();
+  renderCalendar();
+});
+
+// Initial render (before Firebase loads)
+renderCalendar();
+</script>
+</body>
+</html>
